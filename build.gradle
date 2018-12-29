@@ -1,0 +1,54 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'application'
+
+sourceCompatibility = 1.8
+version = '1.0'
+
+mainClassName = "org.mcnpl.pfp.Main"
+
+repositories {
+	flatDir {
+		dirs 'lib'
+	}
+	mavenLocal()
+	mavenCentral()
+}
+
+dependencies {
+	compile name: 'mcnpl-common-1.3.0'
+	compile 'org.jodd:jodd-mail:4.3.2'
+	compile 'com.miglayout:miglayout-swing:4.2'
+	
+	//Allows the app to access the Windows Credentials Manager.
+	compile 'net.java.dev.jna:jna-platform:4.2.2'
+	
+	testCompile 'junit:junit:4.+'
+	testCompile 'org.mockito:mockito-all:1.10.+'
+}
+
+//Update "build.properties" file.
+//source: https://stackoverflow.com/a/25328289
+processResources {
+    filesMatching('**/*.properties') {
+        filter {
+            it.replace('${version}', version)
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': mainClassName
+    }
+    
+    //build a fat JAR
+    from {
+        configurations.compile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+        configurations.runtime.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+}

@@ -11,19 +11,19 @@
 
 **Step 1:** Patron opens the app and accepts the terms and conditions.
 
-[![Step 1](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/screenshots/step1.png)]
+![Step 1](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/screenshots/step1.png)
 
 **Step 2:** Patron is prompted to email the documents they would like to print from their phone to an email account that is under the library's control. This can often by done by opening the document on their phone, and then tapping a "Share" button. They can also forward an existing email.
 
-[![Step 2](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/screenshots/step2.png)]
+![Step 2](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/screenshots/step2.png)
 
 **Step 3:** Patron is prompted to enter their email address.
 
-[![Step 3](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/screenshots/step3.png)]
+![Step 3](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/screenshots/step3.png)
 
 **Step 4:** The application connects to the library-controlled email account and downloads the files that are attached to the patron's email.
 
-[![Step 4](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/screenshots/step4.png)]
+![Step 4](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/screenshots/step4.png)
 
 # Installation instructions
 

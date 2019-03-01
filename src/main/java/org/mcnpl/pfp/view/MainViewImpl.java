@@ -29,9 +29,10 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -67,6 +68,7 @@ public class MainViewImpl extends JFrame implements MainView {
 	private int panelPos;
 	private PromptForEmailStep emailStep;
 	private DownloadStep downloadStep;
+	private boolean somethingWasDownloaded = false;
 
 	private String libraryEmail, disclaimer;
 	private Path downloadDirectory;
@@ -230,9 +232,19 @@ public class MainViewImpl extends JFrame implements MainView {
 		}
 
 		private void downloaded(int emails, int attachments) {
+			if (emails > 0) {
+				somethingWasDownloaded = true;
+			}
+
 			downloading.setStatusDone();
 
 			//@formatter:off
+			JButton back = new ButtonBuilder()
+				.text("Re-enter my email")
+				.icon(Images.BACK)
+				.onClick(this::onBack)
+			.build();
+			
 			JButton checkAgain = new ButtonBuilder()
 				.text("Check again")
 				.icon(Images.RELOAD)
@@ -244,6 +256,18 @@ public class MainViewImpl extends JFrame implements MainView {
 					onNext();
 				})
 			.build();
+			
+			JButton showDownloadedFiles = new ButtonBuilder()
+				.text("<html>Show my downloaded emails and attachments") //prefixing with <html> enables word wrapping
+				.icon(Images.SHOW_FILES)
+				.onClick(MainViewImpl.this::openDownloadLocation)
+			.build();
+
+			JButton deleteFiles = new ButtonBuilder()
+				.text("<html><b style=\"color:#880000\">Delete my downloaded files from this computer")
+				.icon(Images.DELETE)
+				.onClick(onDeleteFiles)
+			.build();
 
 			JButton exit = new ButtonBuilder()
 				.text("Exit")
@@ -254,77 +278,48 @@ public class MainViewImpl extends JFrame implements MainView {
 
 			add(new JLabel("<html><b>Found " + emails + plural(" email", emails) + " and " + attachments + plural(" attachment", attachments) + "."), "gapbottom 20, wrap");
 
+			boolean noEmailsFound = (emails == 0);
 			boolean noAttachmentsFound = (attachments == 0);
-			if (noAttachmentsFound) {
+
+			String errorMessage = null;
+			List<String> suggestions = Collections.emptyList();
+			if (noEmailsFound) {
+				errorMessage = "No emails from <b>" + getPatronEmail() + "</b> were found in our inbox.";
+
 				//@formatter:off
-				JButton back = new ButtonBuilder()
-					.text("Back")
-					.icon(Images.BACK)
-					.onClick(this::onBack)
-				.build();
+				suggestions = Arrays.asList(
+					"Did you send the email to <b>" + libraryEmail + "</b>?",
+					"Is your email address correct?",
+					"Is the email in your phone's \"Sent\" folder yet?",
+					"The email you sent us may not have arrived yet. Wait a minute and click \"Check again\"."
+				);
 				//@formatter:on
-
-				boolean noEmailsFound = (emails == 0);
-
-				String errorMessage = "<html><span style=\"color:#880000\">";
-				if (noEmailsFound) {
-					errorMessage += "No emails from <b>" + getPatronEmail() + "</b> were found in our inbox.";
-				} else {
-					errorMessage += "The " + plural("email", emails) + " we found did not have any attachments.";
-				}
-
-				List<String> suggestions = new ArrayList<>();
-				if (noEmailsFound) {
-					suggestions.add("Did you send the email to <b>" + libraryEmail + "</b>?");
-					suggestions.add("Is your email address correct?");
-					suggestions.add("Is the email in your phone's \"Sent\" folder yet?");
-					suggestions.add("The email you sent to us may not have arrived yet. Wait a minute and click \"Check again\".");
-				} else {
-					suggestions.add("Send us another email with the documents attached, and click \"Check again\".");
-				}
-
-				back.setText("Re-enter my email");
-
-				add(new JLabel("<html><span style=\"color:#880000\">" + errorMessage), "wrap, gapbottom 20");
-
-				if (!suggestions.isEmpty()) {
-					StringBuilder sb = new StringBuilder("<html><table cellpadding=\"0\" cellspacing=\"0\">");
-					for (String suggestion : suggestions) {
-						//@formatter:off
-						sb.append(
-						"<tr>" +
-							"<td valign=\"top\">&bull;&nbsp;</td>" +
-							"<td>" + suggestion + "</td>" +
-						"</tr>"
-						);
-						//@formatter:on
-					}
-					add(new JLabel(sb.toString()), "wrap, gapbottom 20");
-				}
-
-				add(back, "w 400!, wrap");
-				add(checkAgain, "w 400!, wrap");
-				add(exit, "w 400!");
-			} else {
+			} else if (noAttachmentsFound) {
 				//@formatter:off
-				JButton showDownloadedFiles = new ButtonBuilder()
-					.text("Show my downloaded files")
-					.icon(Images.SHOW_FILES)
-					.onClick(MainViewImpl.this::openDownloadLocation)
-				.build();
-
-				JButton deleteFiles = new ButtonBuilder()
-					.text("<html><b style=\"color:#880000\">Delete my downloaded files from this computer")
-					.icon(Images.DELETE)
-					.onClick(onDeleteFiles)
-				.build();
+				suggestions = Arrays.asList(
+					"The " + plural("email", emails) + " we found did not have any attachments. Did you forget to attach your files to the email? If so, send us another email with the documents attached, and click \"Check again\"."
+				);
 				//@formatter:on
-
-				add(showDownloadedFiles, "w 400!, wrap");
-				add(checkAgain, "w 400!, wrap");
-				add(deleteFiles, "w 400!, wrap");
-				add(exit, "w 400!");
 			}
+
+			if (errorMessage != null) {
+				add(new JLabel("<html><span style=\"color:#880000\">" + errorMessage), "wrap, gapbottom 20");
+			}
+			if (!suggestions.isEmpty()) {
+				add(new BulletedList(suggestions), "wrap, gapbottom 20");
+			}
+
+			/*
+			 * This StepPanel object is recreated every time the user checks for
+			 * new emails. Show the "Show Downloaded Files" and "Delete files"
+			 * button if something was downloaded since the app was first
+			 * launched.
+			 */
+			if (somethingWasDownloaded) add(showDownloadedFiles, "w 400!, wrap");
+			add(back, "w 400!, wrap");
+			add(checkAgain, "w 400!, wrap");
+			if (somethingWasDownloaded) add(deleteFiles, "w 400!, wrap");
+			add(exit, "w 400!");
 
 			refreshGui();
 
@@ -340,7 +335,7 @@ public class MainViewImpl extends JFrame implements MainView {
 			 * 
 			 * Dirty workaround: Manually increase the window height.
 			 */
-			MainViewImpl.this.setSize(getWidth(), getHeight() + 100);
+			MainViewImpl.this.setSize(getWidth(), getHeight() + 150);
 		}
 
 		private void error(Throwable thrown) {
@@ -463,7 +458,7 @@ public class MainViewImpl extends JFrame implements MainView {
 		//@formatter:off
 		int answer = DialogBuilder.warning()
 			.parent(this)
-			.text("The following files could not be deleted. Close all open windows and click \"Try Again\":\n\n" + String.join("\n", fileNames(notDeleted)))
+			.text("The following files could not be deleted. Close all open windows and click \"Try Again\":\n" + bulletedFilenameList(notDeleted))
 			.title("Files could not be deleted")
 			.buttons(JOptionPane.YES_NO_OPTION, "*Try again", "Cancel")
 		.show();
@@ -477,7 +472,7 @@ public class MainViewImpl extends JFrame implements MainView {
 		//@formatter:off
 		int answer = DialogBuilder.question()
 			.parent(this)
-			.text("You've downloaded the following files. Do you want to delete them off of this computer?\n\n" + String.join("\n", fileNames(downloadedFiles)))
+			.text("You've downloaded the following files.\nDo you want to delete them off of this computer?\n" + bulletedFilenameList(downloadedFiles))
 			.title("Delete Downloaded Files?")
 			.buttons(JOptionPane.YES_NO_CANCEL_OPTION, "Delete", "Keep", "*Cancel")
 		.show();
@@ -493,12 +488,12 @@ public class MainViewImpl extends JFrame implements MainView {
 		}
 	}
 
-	private static List<String> fileNames(List<Path> files) {
-		//@formatter:off
-		return files.stream()
-			.map(file -> file.getFileName().toString())
-		.collect(Collectors.toList());
-		//@formatter:on
+	private String bulletedFilenameList(List<Path> files) {
+		StringBuilder sb = new StringBuilder();
+		for (Path file : files) {
+			sb.append("\n• ").append(file.getFileName().toString());
+		}
+		return sb.toString();
 	}
 
 	@Override
@@ -721,6 +716,23 @@ public class MainViewImpl extends JFrame implements MainView {
 			}
 
 			return button;
+		}
+	}
+
+	private static class BulletedList extends JLabel {
+		public BulletedList(List<String> items) {
+			StringBuilder sb = new StringBuilder("<html><table cellpadding=\"0\" cellspacing=\"0\">");
+			for (String item : items) {
+				//@formatter:off
+				sb.append(
+				"<tr>" +
+					"<td valign=\"top\">&bull;&nbsp;</td>" +
+					"<td>" + item + "</td>" +
+				"</tr>"
+				);
+				//@formatter:on
+			}
+			setText(sb.toString());
 		}
 	}
 }

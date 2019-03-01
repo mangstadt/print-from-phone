@@ -140,6 +140,6 @@ public class MockMailServer extends MailServer<ReceiveMailSession> {
 	 */
 	@SafeVarargs
 	private static ReceivedEmail email(EmailAttachment<? extends DataSource>... attachments) {
-		return ReceivedEmail.create().attachments(Arrays.asList(attachments));
+		return ReceivedEmail.create().attachments(Arrays.asList(attachments)).message("Email body", "text/plain");
 	}
 }

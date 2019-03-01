@@ -46,8 +46,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mcnpl.pfp.Main;
-import org.mcnpl.pfp.model.MainModel;
-import org.mcnpl.pfp.model.MainModelImpl;
 
 import jodd.mail.EmailAttachment;
 import jodd.mail.EmailFilter;
@@ -104,9 +102,9 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(
-				attachment("file1.txt", "one")
-			)
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.attachment(attachment("file1.txt", "one"))
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -122,7 +120,7 @@ public class MainModelImplTest {
 		verify(callback).connected();
 		verify(callback).done(1, 1);
 
-		assertDownloadedFiles("file1.txt");
+		assertDownloadedFiles("from@email.com.txt", "file1.txt");
 	}
 
 	/**
@@ -133,10 +131,10 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(
-				attachment(null, "one"),
-				attachment("", "two")
-			)
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.attachment(attachment(null, "one"))
+				.attachment(attachment("", "two"))
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -152,7 +150,7 @@ public class MainModelImplTest {
 		verify(callback).connected();
 		verify(callback).done(1, 2);
 
-		assertDownloadedFiles("attachment", "attachment 1");
+		assertDownloadedFiles("from@email.com.txt", "attachment", "attachment-1");
 	}
 
 	/**
@@ -163,12 +161,14 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(
-				attachment("file1.txt", "one"),
-				attachment("file1.txt", "two"),
-				attachment("file1", "three"),
-				attachment("file1", "four")
-			)
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.attachment(attachment("file.txt", "one"))
+				.attachment(attachment("file.txt", "two"))
+				.attachment(attachment("file.txt", "three"))
+				.attachment(attachment("file", "four"))
+				.attachment(attachment("file", "five"))
+				.attachment(attachment("file", "six"))
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -182,9 +182,9 @@ public class MainModelImplTest {
 		model.downloadAttachments("from@email.com", callback);
 
 		verify(callback).connected();
-		verify(callback).done(1, 4);
+		verify(callback).done(1, 6);
 
-		assertDownloadedFiles("file1.txt", "file1 1.txt", "file1", "file1 1");
+		assertDownloadedFiles("from@email.com.txt", "file.txt", "file-1.txt", "file-2.txt", "file", "file-1", "file-2");
 	}
 
 	/**
@@ -195,8 +195,8 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(),
-			email()
+			ReceivedEmail.create().message("body", "text/plain"),
+			ReceivedEmail.create().message("body", "text/plain")
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -212,7 +212,7 @@ public class MainModelImplTest {
 		verify(callback).connected();
 		verify(callback).done(2, 0);
 
-		assertDownloadedFiles();
+		assertDownloadedFiles("from@email.com.txt", "from@email.com-1.txt");
 	}
 
 	/**
@@ -240,15 +240,69 @@ public class MainModelImplTest {
 	}
 
 	@Test
+	public void email_body_only_save_html_message() throws Exception {
+		//@formatter:off
+		MailServer<ReceiveMailSession> server = mockMailServer(
+			"from@email.com",
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.message("body", "text/rtf")
+				.message("<html><body><b>Body</b></body></html>", "text/html")
+		);
+
+		MainModelImpl model = new MainModelImpl.Builder()
+			.server(server)
+			.email("email")
+			.downloadDirectory(tempFolder.getRoot().toPath())
+		.build();
+		//@formatter:on
+
+		MainModel.DownloadAttachmentsCallback callback = mock(MainModel.DownloadAttachmentsCallback.class);
+		model.downloadAttachments("from@email.com", callback);
+
+		verify(callback).connected();
+		verify(callback).done(1, 0);
+
+		assertDownloadedFiles("from@email.com.html");
+	}
+
+	@Test
+	public void email_body_no_html_message() throws Exception {
+		//@formatter:off
+		MailServer<ReceiveMailSession> server = mockMailServer(
+			"from@email.com",
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.message("body", "text/rtf")
+				.message("body", "unrecognized/mimeType")
+		);
+
+		MainModelImpl model = new MainModelImpl.Builder()
+			.server(server)
+			.email("email")
+			.downloadDirectory(tempFolder.getRoot().toPath())
+		.build();
+		//@formatter:on
+
+		MainModel.DownloadAttachmentsCallback callback = mock(MainModel.DownloadAttachmentsCallback.class);
+		model.downloadAttachments("from@email.com", callback);
+
+		verify(callback).connected();
+		verify(callback).done(1, 0);
+
+		assertDownloadedFiles("from@email.com.txt", "from@email.com.rtf", "from@email.com-1.txt");
+	}
+
+	@Test
 	public void storeStatistics() throws Exception {
 		Path stats = tempFolder.newFile().toPath();
 
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(
-				attachment("file1.txt", "one")
-			)
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.attachment(attachment("file1.txt", "one"))
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -302,7 +356,7 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email()
+			ReceivedEmail.create().message("body", "text/plain")
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -325,9 +379,9 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(
-				attachment("file1.txt", "one")
-			)
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.attachment(attachment("file1.txt", "one"))
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -347,10 +401,10 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(
-				attachment("file1.txt", "one"),
-				attachment("file2.txt", "two")
-			)
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.attachment(attachment("file1.txt", "one"))
+				.attachment(attachment("file2.txt", "one"))
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -388,10 +442,10 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(
-				attachment("file1.txt", "one"),
-				attachment("file2.txt", "two")
-			)
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.attachment(attachment("file1.txt", "one"))
+				.attachment(attachment("file2.txt", "one"))
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -412,9 +466,9 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(
-				attachment("file1.txt", "one")
-			)
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.attachment(attachment("file1.txt", "one"))
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -425,7 +479,8 @@ public class MainModelImplTest {
 		//@formatter:on
 
 		model.downloadAttachments("from@email.com", mock(MainModel.DownloadAttachmentsCallback.class));
-		assertEquals(Arrays.asList(tempFolder.getRoot().toPath().resolve("file1.txt")), model.getDownloadedFiles());
+
+		assertGetDownloadedFilesMethod(model, "file1.txt", "from@email.com.txt");
 	}
 
 	/**
@@ -437,9 +492,9 @@ public class MainModelImplTest {
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
 			"from@email.com",
-			email(
-				attachment("file1.txt", "one")
-			)
+			ReceivedEmail.create()
+				.message("body", "text/plain")
+				.attachment(attachment("file1.txt", "one"))
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -451,7 +506,18 @@ public class MainModelImplTest {
 
 		model.downloadAttachments("from@email.com", mock(MainModel.DownloadAttachmentsCallback.class));
 		Files.delete(tempFolder.getRoot().toPath().resolve("file1.txt"));
-		assertEquals(Arrays.asList(), model.getDownloadedFiles());
+		assertGetDownloadedFilesMethod(model, "from@email.com.txt");
+	}
+
+	private void assertGetDownloadedFilesMethod(MainModelImpl model, String... expectedFilenames) {
+		Path folder = tempFolder.getRoot().toPath();
+		Set<Path> expected = Arrays.stream(expectedFilenames) //@formatter:off
+			.map(s -> folder.resolve(s))
+		.collect(Collectors.toSet()); //@formatter:on
+
+		Set<Path> actual = new HashSet<>(model.getDownloadedFiles());
+
+		assertEquals(expected, actual);
 	}
 
 	/**
@@ -524,16 +590,6 @@ public class MainModelImplTest {
 	 */
 	private static EmailAttachment<? extends DataSource> attachment(String filename, String content) {
 		return EmailAttachment.with().name(filename).content(content.getBytes()).buildByteArrayDataSource();
-	}
-
-	/**
-	 * Creates an email.
-	 * @param attachments the email's attachments
-	 * @return the email
-	 */
-	@SafeVarargs
-	private static ReceivedEmail email(EmailAttachment<? extends DataSource>... attachments) {
-		return ReceivedEmail.create().attachments(Arrays.asList(attachments));
 	}
 
 	/**

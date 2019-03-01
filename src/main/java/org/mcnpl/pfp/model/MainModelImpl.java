@@ -19,19 +19,23 @@
 package org.mcnpl.pfp.model;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.activation.DataSource;
 
 import org.mcnpl.pfp.Main;
 
 import jodd.mail.EmailAttachment;
+import jodd.mail.EmailMessage;
 import jodd.mail.MailServer;
 import jodd.mail.ReceiveMailSession;
 import jodd.mail.ReceivedEmail;
@@ -90,16 +94,23 @@ public class MainModelImpl implements MainModel {
 
 		attachmentsDownloaded = 0;
 		for (ReceivedEmail email : emails) {
-			List<EmailAttachment<? extends DataSource>> attachments = email.attachments();
+			Optional<EmailMessage> htmlMessage = email.messages().stream() //@formatter:off
+				.filter(m -> m.getMimeType().equalsIgnoreCase("text/html"))
+			.findFirst(); //@formatter:on
 
-			for (EmailAttachment<? extends DataSource> attachment : attachments) {
-				String name = attachment.getName();
-				if (name == null || name.trim().isEmpty()) {
-					name = "attachment";
+			if (htmlMessage.isPresent()) {
+				Path path = saveEmailBody(htmlMessage.get(), from);
+				downloadedFiles.add(path);
+			} else {
+				for (EmailMessage message : email.messages()) {
+					Path path = saveEmailBody(message, from);
+					downloadedFiles.add(path);
 				}
+			}
 
-				Path file = saveFile(name, attachment.toByteArray());
-				downloadedFiles.add(file);
+			for (EmailAttachment<? extends DataSource> attachment : email.attachments()) {
+				Path path = saveAttachment(attachment);
+				downloadedFiles.add(path);
 				attachmentsDownloaded++;
 			}
 		}
@@ -123,15 +134,78 @@ public class MainModelImpl implements MainModel {
 		//@formatter:on
 	}
 
-	private Path saveFile(String name, byte[] data) throws IOException {
-		Path file = downloadDirectory.resolve(name);
-		int num = 0;
-		while (Files.exists(file)) {
-			file = downloadDirectory.resolve(addNumberToFilename(name, ++num));
+	private Path saveEmailBody(EmailMessage message, String from) throws IOException {
+		String extension;
+		switch (message.getMimeType().toLowerCase()) {
+		case "text/html":
+			extension = "html";
+			break;
+		case "text/rtf":
+			extension = "rtf";
+			break;
+		default:
+			extension = "txt";
+			break;
 		}
 
-		Files.write(file, data);
-		return file;
+		String filename = from + "." + extension;
+
+		Charset charset;
+		try {
+			charset = Charset.forName(message.getEncoding());
+		} catch (Exception e) {
+			charset = Charset.defaultCharset();
+		}
+
+		byte data[] = message.getContent().getBytes(charset);
+
+		return saveFile(filename, data);
+	}
+
+	private Path saveAttachment(EmailAttachment<? extends DataSource> attachment) throws IOException {
+		String filename = attachment.getName();
+		if (filename == null || filename.trim().isEmpty()) {
+			filename = "attachment";
+		}
+
+		byte data[] = attachment.toByteArray();
+
+		return saveFile(filename, data);
+	}
+
+	private Path saveFile(String name, byte[] data) throws IOException {
+		Path path = downloadDirectory.resolve(name);
+		path = uniqueFilename(path);
+		Files.write(path, data);
+		return path;
+	}
+
+	private Path uniqueFilename(Path path) {
+		if (!Files.exists(path)) {
+			return path;
+		}
+
+		String filenamePattern;
+		{
+			String filename = path.getFileName().toString();
+			int dot = filename.lastIndexOf('.');
+			if (dot < 0) {
+				filenamePattern = filename + "-%s";
+			} else {
+				filenamePattern = filename.substring(0, dot) + "-%s" + filename.substring(dot);
+			}
+		}
+
+		Path parent = path.getParent();
+		int number = 0;
+		Path uniquePath;
+		do {
+			number++;
+			String newFilename = String.format(filenamePattern, number);
+			uniquePath = (parent == null) ? Paths.get(newFilename) : parent.resolve(newFilename);
+		} while (Files.exists(uniquePath));
+
+		return uniquePath;
 	}
 
 	@Override
@@ -159,23 +233,6 @@ public class MainModelImpl implements MainModel {
 		downloadedFiles.removeIf(file -> !Files.exists(file));
 
 		return new ArrayList<>(downloadedFiles);
-	}
-
-	/**
-	 * Appends the given number to the given filename, taking into account the
-	 * file's extension.
-	 * @param filename the filename (e.g. "attachment.pdf")
-	 * @param number the number to append
-	 * @return the filename containing the number (e.g. "attachment 4.pdf")
-	 */
-	private static String addNumberToFilename(String filename, int number) {
-		int pos = filename.lastIndexOf('.');
-
-		//@formatter:off
-		return (pos < 0) ?
-			filename + " " + number :
-			filename.substring(0, pos) + " " + number + filename.substring(pos);	
-		//@formatter:on
 	}
 
 	/**

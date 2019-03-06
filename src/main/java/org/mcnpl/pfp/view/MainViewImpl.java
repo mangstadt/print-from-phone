@@ -316,7 +316,7 @@ public class MainViewImpl extends JFrame implements MainView {
 			 * launched.
 			 */
 			if (somethingWasDownloaded) add(showDownloadedFiles, "w 400!, wrap");
-			add(back, "w 400!, wrap");
+			if (noEmailsFound) add(back, "w 400!, wrap");
 			add(checkAgain, "w 400!, wrap");
 			if (somethingWasDownloaded) add(deleteFiles, "w 400!, wrap");
 			add(exit, "w 400!");

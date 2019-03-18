@@ -24,8 +24,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
@@ -241,13 +243,15 @@ public class MainModelImplTest {
 
 	@Test
 	public void email_body_only_save_html_message() throws Exception {
+		String htmlBody = readFile("email-downloaded-from-gmail.html", "UTF-8");
+
 		//@formatter:off
 		MailServer<ReceiveMailSession> server = mockMailServer(
-			"from@email.com",
 			ReceivedEmail.create()
+				.from("from@email.com")
 				.message("body", "text/plain")
 				.message("body", "text/rtf")
-				.message("<html><body><b>Body</b></body></html>", "text/html")
+				.message(htmlBody, "text/html", "UTF-8")
 		);
 
 		MainModelImpl model = new MainModelImpl.Builder()
@@ -264,6 +268,14 @@ public class MainModelImplTest {
 		verify(callback).done(1, 0);
 
 		assertDownloadedFiles("from@email.com.html");
+
+		/*
+		 * The email message is wrapped in some tags when saved so that an
+		 * encoding can be defined.
+		 */
+		String expected = "<html><head><meta charset=\"UTF-8\" /></head><body>" + htmlBody + "</body></html>";
+		String actual = new String(Files.readAllBytes(tempFolder.getRoot().toPath().resolve("from@email.com.html")), "UTF-8");
+		assertEquals(expected, actual);
 	}
 
 	@Test
@@ -590,6 +602,28 @@ public class MainModelImplTest {
 	 */
 	private static EmailAttachment<? extends DataSource> attachment(String filename, String content) {
 		return EmailAttachment.with().name(filename).content(content.getBytes()).buildByteArrayDataSource();
+	}
+
+	/**
+	 * Reads a file from the classpath.
+	 * @param name the name of the file
+	 * @param encoding the file's encoding
+	 * @return the file contents
+	 * @throws IOException if there's a problem reading the file
+	 */
+	private static String readFile(String name, String encoding) throws IOException {
+		byte data[];
+		try (InputStream in = MainModelImplTest.class.getResourceAsStream(name)) {
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			byte buf[] = new byte[16384];
+			int read;
+			while ((read = in.read(buf)) != -1) {
+				out.write(buf, 0, read);
+			}
+			data = out.toByteArray();
+		}
+
+		return new String(data, encoding);
 	}
 
 	/**

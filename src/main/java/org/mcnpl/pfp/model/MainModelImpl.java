@@ -135,10 +135,12 @@ public class MainModelImpl implements MainModel {
 	}
 
 	private Path saveEmailBody(EmailMessage message, String from) throws IOException {
+		boolean isHtml = false;
 		String extension;
 		switch (message.getMimeType().toLowerCase()) {
 		case "text/html":
 			extension = "html";
+			isHtml = true;
 			break;
 		case "text/rtf":
 			extension = "rtf";
@@ -154,10 +156,17 @@ public class MainModelImpl implements MainModel {
 		try {
 			charset = Charset.forName(message.getEncoding());
 		} catch (Exception e) {
-			charset = Charset.defaultCharset();
+			charset = Charset.forName("UTF-8");
 		}
 
-		byte data[] = message.getContent().getBytes(charset);
+		String content;
+		if (isHtml) {
+			content = "<html><head><meta charset=\"" + charset.name() + "\" /></head><body>" + message.getContent() + "</body></html>";
+		} else {
+			content = message.getContent();
+		}
+
+		byte data[] = content.getBytes(charset);
 
 		return saveFile(filename, data);
 	}

@@ -2,7 +2,7 @@
 
 |     |     |
 | --- | --- |
-| Download: | [Version 1.0](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/downloads/print-from-phone-1.0.zip) |
+| Download: | [Version 1.1](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/downloads/print-from-phone-1.1.zip) |
 | License: | [![GPL v3 License](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](https://github.com/mangstadt/print-from-phone/blob/master/LICENSE.txt) |
 
 **Print From Phone** is a desktop application for public libraries that aims to simplify the process of printing documents from patrons' smart phones.
@@ -28,11 +28,11 @@
 # Installation instructions
 
 1. Print From Phone requires Java 8 or later. You can download Java here: [https://java.com](https://java.com)
-1. Download the ZIP file [here](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/downloads/print-from-phone-1.0.zip).
+1. Download the ZIP file [here](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/downloads/print-from-phone-1.1.zip).
 1. Extract the contents of the ZIP file to a location of your choice.
-1. Open the `settings.properties` file with a text editor and edit as needed. This file must be stored in the same place as the `print-from-phone-1.0.jar` file.
+1. Open the `settings.properties` file with a text editor and edit as needed. This file must be stored in the same place as the `print-from-phone-1.1.jar` file.
 1. Open the `disclaimer.html` file and edit to your liking. This is the "term and conditions" text that the patron sees when they first open the application.
-1. Double-click the `print-from-phone-1.0.jar` file to launch the application.
+1. Double-click the `print-from-phone-1.1.jar` file to launch the application.
 
 # How to add credentials to the Windows Credential Manager
 
@@ -77,10 +77,10 @@ Print From Phone uses [Gradle](https://gradle.org/) as its build tool.
 Running the `gradle build` command will build a fat, executable JAR file and save it to the `build/libs` folder.
 
 Adding a `--mock` parameter at the command line will force it to use a mock email server and download mock attachments:  
-`java -jar print-from-email-1.0.jar --mock`
+`java -jar print-from-email-1.1.jar --mock`
 
 You may also specify the path to the `settings.properties` file at the command line, like so:  
-`java -jar print-from-email-1.0.jar "C:\path\to\settings.properties"`
+`java -jar print-from-email-1.1.jar "C:\path\to\settings.properties"`
 
 # Contributions
 

@@ -31,7 +31,7 @@
 1. Download the ZIP file [here](https://raw.githubusercontent.com/mangstadt/print-from-phone/master/downloads/print-from-phone-1.0.zip).
 1. Extract the contents of the ZIP file to a location of your choice.
 1. Open the `settings.properties` file with a text editor and edit as needed. This file must be stored in the same place as the `print-from-phone-1.0.jar` file.
-1. Open the `license.html` file and edit to your liking. This is the "term and conditions" text that the patron sees when they first open the application.
+1. Open the `disclaimer.html` file and edit to your liking. This is the "term and conditions" text that the patron sees when they first open the application.
 1. Double-click the `print-from-phone-1.0.jar` file to launch the application.
 
 # How to add credentials to the Windows Credential Manager

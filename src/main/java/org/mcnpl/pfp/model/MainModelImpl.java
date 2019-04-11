@@ -120,7 +120,7 @@ public class MainModelImpl implements MainModel {
 
 	@Override
 	public void storeStatistics() throws IOException {
-		if (statistics == null || attachmentsDownloaded == 0) {
+		if (statistics == null || emailsDownloaded == 0) {
 			return;
 		}
 

@@ -330,7 +330,7 @@ public class MainModelImplTest {
 
 		List<String> lines = Files.readAllLines(stats); //note: column headers are not created because the file already exists
 		assertEquals(1, lines.size());
-		assertTrue(lines.get(0).matches("\\d+/\\d+/\\d+ \\d+:\\d+ (AM|PM)," + Pattern.quote(Main.getComputerName()) + ",1,1"));
+		assertMatches("\\d+/\\d+/\\d+ \\d+:\\d+ (AM|PM)," + Pattern.quote(Main.getComputerName()) + ",1,1", lines.get(0));
 	}
 
 	/*
@@ -383,7 +383,8 @@ public class MainModelImplTest {
 		model.storeStatistics();
 
 		List<String> lines = Files.readAllLines(stats); //note: column headers are not created because the file already exists
-		assertEquals(0, lines.size());
+		assertEquals(1, lines.size());
+		assertMatches("\\d+/\\d+/\\d+ \\d+:\\d+ (AM|PM)," + Pattern.quote(Main.getComputerName()) + ",1,0", lines.get(0));
 	}
 
 	@Test
@@ -548,6 +549,16 @@ public class MainModelImplTest {
 		//@formatter:on
 
 		assertEquals(expected, actual);
+	}
+	
+	/**
+	 * Asserts that a string matches a regular expression.
+	 * @param expectedRegex the regular expression
+	 * @param actual the string
+	 */
+	private static void assertMatches(String expectedRegex, String actual) {
+		String message = "\"" + actual + "\" did not match regex \"" + expectedRegex + "\".";
+		assertTrue(message, actual.matches(expectedRegex));
 	}
 
 	/**
